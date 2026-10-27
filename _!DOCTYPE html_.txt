@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日期符號與字體產生器</title>
+<style>
+:root{--bg:#faf9f6;--card:#fff;--text:#1f1e1b;--sub:#6f6c66;--line:#e4e1da;--accent:#c2562d;--chip:#f1eee8;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1a18;--card:#262522;--text:#efece6;--sub:#a29e96;--line:#3a3834;--accent:#e8845c;--chip:#31302c;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:8px 0 14px}
+h2{font-size:15px;margin:0 0 8px;color:var(--sub);font-weight:600}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px}
+textarea{width:100%;min-height:64px;font:inherit;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);resize:vertical}
+.out{display:flex;gap:8px;align-items:center;margin-top:10px}
+.out .val{flex:1;font-size:26px;min-height:42px;word-break:break-all;padding:6px 10px;background:var(--chip);border-radius:10px;white-space:pre-wrap}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:9px 14px;background:var(--accent);color:#fff}
+.row{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .name{width:78px;flex:none;font-size:12px;color:var(--sub)}
+.row .txt{flex:1;font-size:19px;word-break:break-all;min-height:28px}
+.row button{background:var(--chip);color:var(--text);padding:6px 12px;font-size:14px}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#222;color:#fff;padding:8px 16px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:.92}
+</style>
+</head>
+<body>
+<main>
+<h1>日期符號與字體產生器</h1>
+
+<section>
+<h2>日期轉換</h2>
+<textarea id="d"></textarea>
+<div class="out"><div class="val" id="dout"></div><button id="dcopy">複製</button></div>
+</section>
+
+<section>
+<h2>字體轉換</h2>
+<textarea id="t"></textarea>
+<div id="fonts" style="margin-top:8px"></div>
+</section>
+</main>
+<div id="toast">已複製</div>
+
+<script>
+var $=function(i){return document.getElementById(i)};
+var cp=function(n){return String.fromCodePoint(n)};
+
+function toast(){var t=$('toast');t.classList.add('on');setTimeout(function(){t.classList.remove('on')},1100)}
+function copyText(s){
+  if(!s)return;
+  var fb=function(){var a=document.createElement('textarea');a.value=s;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();try{document.execCommand('copy');toast()}catch(e){}document.body.removeChild(a)};
+  try{navigator.clipboard.writeText(s).then(toast,fb)}catch(e){fb()}
+}
+
+/* 日期 */
+function convertDates(s){
+  return s.replace(/(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})\s*日?/g,function(all,m,d){
+    m=+m;d=+d;
+    return (m>=1&&m<=12&&d>=1&&d<=31)?cp(0x32C0+m-1)+cp(0x33E0+d-1):all;
+  });
+}
+function renderDate(){$('dout').textContent=convertDates($('d').value||'1/1')}
+$('d').addEventListener('input',renderDate);
+$('dcopy').onclick=function(){copyText($('dout').textContent)};
+
+/* 字體 */
+function mk(U,L,D,exc){
+  exc=exc||{};
+  return function(s){
+    return Array.from(s).map(function(c){
+      if(exc[c])return exc[c];
+      var k=c.charCodeAt(0);
+      if(c.length===1){
+        if(k>=65&&k<=90&&U!=null)return cp(U+k-65);
+        if(k>=97&&k<=122&&L!=null)return cp(L+k-97);
+        if(k>=48&&k<=57&&D!=null)return cp(D+k-48);
+      }
+      return c;
+    }).join('');
+  };
+}
+function parse(a,b){var o={};a=Array.from(a);b=Array.from(b);for(var i=0;i<a.length;i++)o[a[i]]=b[i];return o}
+function fromMap(map,rev){
+  return function(s){
+    var r=Array.from(s.toLowerCase()).map(function(c){return map[c]||c});
+    return (rev?r.reverse():r).join('');
+  };
+}
+var small=fromMap(parse('abcdefghijklmnopqrstuvwxyz','ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ'));
+var sup=fromMap(parse('abcdefghijklmnopqrstuvwxyz0123456789+-=()','ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖqʳˢᵗᵘᵛʷˣʸᶻ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾'));
+var sub=fromMap(parse('aehijklmnoprstuvx0123456789+-=()','ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎'));
+var flip=fromMap(parse('abcdefghijklmnopqrstuvwxyz0123456789',['ɐ','q','ɔ','p','ǝ','ɟ','ƃ','ɥ','ᴉ','ɾ','ʞ','l','ɯ','u','o','d','b','ɹ','s','ʇ','n','ʌ','ʍ','x','ʎ','z','0','Ɩ','ᄅ','Ɛ','ㄣ','ϛ','9','ㄥ','8','6']),true);
+
+function circ(s){return Array.from(s).map(function(c){
+  var k=c.charCodeAt(0);
+  if(k>=65&&k<=90)return cp(0x24B6+k-65);
+  if(k>=97&&k<=122)return cp(0x24D0+k-97);
+  if(k>=49&&k<=57)return cp(0x2460+k-49);
+  if(k===48)return cp(0x24EA);
+  return c}).join('')}
+function negCirc(s){return Array.from(s).map(function(c){
+  var k=c.toUpperCase().charCodeAt(0);
+  if(c.length===1&&k>=65&&k<=90)return cp(0x1F150+k-65);
+  if(c>='1'&&c<='9')return cp(0x2776+(+c)-1);
+  if(c==='0')return cp(0x24FF);
+  return c}).join('')}
+function upperOnly(base){return function(s){return Array.from(s).map(function(c){
+  var k=c.toUpperCase().charCodeAt(0);
+  return (c.length===1&&k>=65&&k<=90)?cp(base+k-65):c}).join('')}}
+function paren(s){return Array.from(s).map(function(c){
+  var k=c.charCodeAt(0);
+  if(k>=97&&k<=122)return cp(0x249C+k-97);
+  if(k>=65&&k<=90)return cp(0x249C+k-65);
+  if(k>=49&&k<=57)return cp(0x2474+k-49);
+  return c}).join('')}
+function combine(ch){return function(s){return Array.from(s).map(function(c){return c===' '?c:c+ch}).join('')}}
+function fullwidth(s){return mk(0xFF21,0xFF41,0xFF10)(s).replace(/ /g,'\u3000')}
+
+var script={B:'ℬ',E:'ℰ',F:'ℱ',H:'ℋ',I:'ℐ',L:'ℒ',M:'ℳ',R:'ℛ',e:'ℯ',g:'ℊ',o:'ℴ'};
+var fraktur={C:'ℭ',H:'ℌ',I:'ℑ',R:'ℜ',Z:'ℨ'};
+var dbl={C:'ℂ',H:'ℍ',N:'ℕ',P:'ℙ',Q:'ℚ',R:'ℝ',Z:'ℤ'};
+
+var styles=[
+ ['上標',sup],
+ ['無襯線粗',mk(0x1D5D4,0x1D5EE,0x1D7EC)],
+ ['下標',sub],
+ ['粗體',mk(0x1D400,0x1D41A,0x1D7CE)],
+ ['斜體',mk(0x1D434,0x1D44E,null,{h:'ℎ'})],
+ ['粗斜體',mk(0x1D468,0x1D482,0x1D7CE)],
+ ['草書',mk(0x1D49C,0x1D4B6,null,script)],
+ ['粗草書',mk(0x1D4D0,0x1D4EA,0x1D7CE)],
+ ['舊英文',mk(0x1D504,0x1D51E,null,fraktur)],
+ ['粗舊英文',mk(0x1D56C,0x1D586,0x1D7CE)],
+ ['外框',mk(0x1D538,0x1D552,0x1D7D8,dbl)],
+ ['無襯線',mk(0x1D5A0,0x1D5BA,0x1D7E2)],
+ ['無襯線斜',mk(0x1D608,0x1D622,0x1D7E2)],
+ ['無襯線粗斜',mk(0x1D63C,0x1D656,0x1D7EC)],
+ ['等寬',mk(0x1D670,0x1D68A,0x1D7F6)],
+ ['全形',fullwidth],
+ ['泡泡',circ],
+ ['黑泡泡',negCirc],
+ ['括號',paren],
+ ['正方形',upperOnly(0x1F130)],
+ ['黑正方形',upperOnly(0x1F170)],
+ ['小型大寫',small],
+ ['上下顛倒',flip],
+ ['刪除線',combine('\u0336')],
+ ['底線',combine('\u0332')],
+ ['雙底線',combine('\u0333')],
+ ['斜線穿過',combine('\u0338')],
+ ['上線',combine('\u0305')]
+];
+
+var box=$('fonts');
+styles.forEach(function(st){
+  var r=document.createElement('div');r.className='row';
+  r.innerHTML='<div class="name"></div><div class="txt"></div><button>複製</button>';
+  r.children[0].textContent=st[0];
+  r.children[2].onclick=function(){copyText(r.children[1].textContent)};
+  box.appendChild(r);st.push(r);
+});
+function renderFonts(){
+  var v=$('t').value||'ABC123';
+  styles.forEach(function(st){st[2].children[1].textContent=st[1](v)});
+}
+$('t').addEventListener('input',renderFonts);
+renderDate();renderFonts();
+</script>
+</body>
+</html>
